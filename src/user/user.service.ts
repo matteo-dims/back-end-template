@@ -12,10 +12,9 @@ export class UserService {
   ) {}
 
   async addUser(createUserDTO: CreateUserDTO): Promise<User> {
-    // const newUser: any = await this.userModel.create(createUserDTO);
-    // newUser.password = await bcrypt.hash(newUser.password, 10);
-    // return newUser.save();
-    return;
+    const newUser: any = await this.userModel.create(createUserDTO);
+    newUser.password = await bcrypt.hash(newUser.password, 10);
+    return newUser.save();
   }
 
   async findUser(username: string): Promise<User | undefined> {
