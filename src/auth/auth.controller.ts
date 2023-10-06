@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpException,
+  HttpStatus,
   Post,
   Request,
   UseGuards,
@@ -24,14 +26,21 @@ export class AuthController {
 
   @Post('/register')
   async register(@Body() createUserDTO: CreateUserDTO) {
-    return await this.userService.addUser(createUserDTO);
+    try {
+      return await this.userService.addUser(createUserDTO);
+    } catch (error) {
+      throw new HttpException(error.message, error.statusCode);
+    }
   }
 
   @UseGuards(LocalAuthGuard)
   @Post('/login')
   async login(@Request() req) {
-    console.log(req.user);
-    return this.authService.login(req.user);
+    try {
+      return this.authService.login(req.user);
+    } catch (error) {
+      throw new HttpException(error.message, error.statusCode);
+    }
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
