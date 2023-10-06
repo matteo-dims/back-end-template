@@ -7,6 +7,7 @@ import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { CartModule } from './cart/cart.module';
 import { S3ManagerModule } from './s3-manager/s3-manager.module';
+import { StripeModule } from './stripe/stripe.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { S3ManagerModule } from './s3-manager/s3-manager.module';
     AuthModule,
     CartModule,
     S3ManagerModule,
+    StripeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

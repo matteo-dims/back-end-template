@@ -17,6 +17,9 @@ export class User {
 
   @Prop()
   roles: Role[];
+
+  @Prop()
+  stripeCustomerId: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

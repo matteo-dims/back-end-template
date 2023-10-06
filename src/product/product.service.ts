@@ -53,8 +53,10 @@ export class ProductService {
   }
 
   async addProduct(createProductDTO: CreateProductDTO, file: Express.Multer.File): Promise<Product> {
-    const awsResponse = await this.s3manage.uploadFile(file);
-    createProductDTO.imgUrl = file.originalname;
+    if (file) {
+      const awsResponse = await this.s3manage.uploadFile(file);
+      createProductDTO.imgUrl = file.originalname;
+    }
     const newProduct = await this.productModel.create(createProductDTO);
     return newProduct.save();
   }

@@ -3,11 +3,15 @@ import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Cart, CartDocument } from './schemas/cart.schema';
 import { ItemDTO } from './dtos/item.dto';
+import { StripeService } from 'src/stripe/stripe.service';
+import { UserService } from 'src/user/user.service';
 
 @Injectable()
 export class CartService {
   constructor(
     @InjectModel('Cart') private readonly cartModel: Model<CartDocument>,
+    private readonly stripeService: StripeService,
+    private readonly userService: UserService,
   ) {}
 
   async createCart(
@@ -38,6 +42,8 @@ export class CartService {
     cart.totalPrice = 0;
     cart.items.forEach((item) => {
       cart.totalPrice += item.quantity * item.price;
+      console.log('quantity : ' + item.quantity);
+      console.log('price : ' + item.price);
     });
   }
 
@@ -70,7 +76,7 @@ export class CartService {
         userId,
         itemDTO,
         subTotalPrice,
-        price,
+        price * quantity,
       );
       return newCart;
     }
@@ -87,5 +93,12 @@ export class CartService {
       cart.items.splice(itemIndex, 1);
       return cart.save();
     }
+  }
+
+  async payCart(cartId: string, req) {
+    const cart: CartDocument = await this.getCart(req.user.userId);
+    const user = await this.userService.findUserById(req.user.userId);
+    const url: string = await this.stripeService.createCheckoutSession(cart.totalPrice, user.stripeCustomerId);
+    return url;
   }
 }
