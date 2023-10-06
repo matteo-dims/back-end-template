@@ -46,4 +46,11 @@ export class CartController {
     if (!cart) throw new NotFoundException('Cart does not exist');
     return cart;
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('/pay/:id')
+  async payCart(@Param('id') cartId: string, @Request() req) {
+    const payment_url = await this.cartService.payCart(cartId, req);
+    return {payment_url: payment_url};
+  }
 }
