@@ -32,7 +32,9 @@ export class ProductService {
     }
 
     for (let product of products) {
-      product.imgUrl = await this.s3manage.s3_getSignedUrl(product.imgUrl);
+      if (product.imgUrl) {
+        product.imgUrl = await this.s3manage.s3_getSignedUrl(product.imgUrl);
+      }
     }
 
     return products;
@@ -41,14 +43,18 @@ export class ProductService {
   async getAllProducts(): Promise<Product[]> {
     const products = await this.productModel.find().exec();
     for (let product of products) {
-      product.imgUrl = await this.s3manage.s3_getSignedUrl(product.imgUrl);
+      if (product.imgUrl) {
+        product.imgUrl = await this.s3manage.s3_getSignedUrl(product.imgUrl);
+      }
     }
     return products;
   }
 
   async getProduct(id: string): Promise<Product> {
     const product = await this.productModel.findById(id).exec();
-    product.imgUrl = await this.s3manage.s3_getSignedUrl(product.imgUrl);
+    if (product.imgUrl) {
+      product.imgUrl = await this.s3manage.s3_getSignedUrl(product.imgUrl);
+    }
     return product;
   }
 
@@ -77,7 +83,9 @@ export class ProductService {
 
   async deleteProduct(id: string): Promise<any> {
     const product = await this.productModel.findById(id).exec();
-    await this.s3manage.s3_delete(product.imgUrl);
+    if (product.imgUrl) {
+      await this.s3manage.s3_delete(product.imgUrl);
+    }
     const deletedProduct = await this.productModel.findByIdAndRemove(id);
     return deletedProduct;
   }
