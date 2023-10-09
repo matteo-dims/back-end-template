@@ -6,6 +6,7 @@ import { ItemDTO } from './dtos/item.dto';
 import { StripeService } from 'src/stripe/stripe.service';
 import { UserService } from 'src/user/user.service';
 import { ProductService } from 'src/product/product.service';
+import { CartState } from './enums/cartState.enum';
 
 @Injectable()
 export class CartService {
@@ -26,6 +27,7 @@ export class CartService {
       userId,
       items: [{ ...itemDTO, subTotalPrice }],
       totalPrice,
+      cartState: CartState.Normal
     });
     return newCart;
   }
@@ -79,6 +81,7 @@ export class CartService {
         itemDTO,
         subTotalPrice,
         price * quantity,
+
       );
       return newCart;
     }
@@ -101,6 +104,8 @@ export class CartService {
     const cart: CartDocument = await this.getCart(req.user.userId);
     const user = await this.userService.findUserById(req.user.userId);
     const url: string = await this.stripeService.createCheckoutSession(cart.totalPrice, user.stripeCustomerId);
+    cart.cartState = CartState.Pending;
+    cart.save();
     return url;
   }
 
@@ -109,6 +114,8 @@ export class CartService {
     for (const item of cart.items) {
       const product = this.productService.updateProduct(item.productId, {isSold: true});
     }
+    cart.cartState = CartState.Paid;
+    cart.save();
     return cart;
   }
 }
