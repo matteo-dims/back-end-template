@@ -5,6 +5,7 @@ import { Cart, CartDocument } from './schemas/cart.schema';
 import { ItemDTO } from './dtos/item.dto';
 import { StripeService } from 'src/stripe/stripe.service';
 import { UserService } from 'src/user/user.service';
+import { ProductService } from 'src/product/product.service';
 
 @Injectable()
 export class CartService {
@@ -12,6 +13,7 @@ export class CartService {
     @InjectModel('Cart') private readonly cartModel: Model<CartDocument>,
     private readonly stripeService: StripeService,
     private readonly userService: UserService,
+    private readonly productService: ProductService,
   ) {}
 
   async createCart(
@@ -38,17 +40,17 @@ export class CartService {
     return deletedCart;
   }
 
-  private recalculateCart(cart: CartDocument) {
+  private async recalculateCart(cart: CartDocument) {
     cart.totalPrice = 0;
-    cart.items.forEach((item) => {
-      cart.totalPrice += item.quantity * item.price;
-      console.log('quantity : ' + item.quantity);
-      console.log('price : ' + item.price);
-    });
+    for (const item of cart.items) {
+      let price = (await this.productService.getProduct(item.productId)).price;
+      cart.totalPrice += item.quantity * price;
+    }
   }
 
   async addItemToCart(userId: string, itemDTO: ItemDTO): Promise<Cart> {
-    const { productId, quantity, price } = itemDTO;
+    const { productId, quantity } = itemDTO;
+    const price = (await this.productService.getProduct(productId)).price;
     const subTotalPrice = quantity * price;
 
     const cart = await this.getCart(userId);
@@ -61,14 +63,14 @@ export class CartService {
       if (itemIndex > -1) {
         const item = cart.items[itemIndex];
         item.quantity = Number(item.quantity) + Number(quantity);
-        item.subTotalPrice = item.quantity * item.price;
+        item.subTotalPrice = item.quantity * price;
 
         cart.items[itemIndex] = item;
-        this.recalculateCart(cart);
+        await this.recalculateCart(cart);
         return cart.save();
       } else {
         cart.items.push({ ...itemDTO, subTotalPrice });
-        this.recalculateCart(cart);
+        await this.recalculateCart(cart);
         return cart.save();
       }
     } else {
@@ -95,10 +97,18 @@ export class CartService {
     }
   }
 
-  async payCart(cartId: string, req) {
+  async payCart(req) {
     const cart: CartDocument = await this.getCart(req.user.userId);
     const user = await this.userService.findUserById(req.user.userId);
     const url: string = await this.stripeService.createCheckoutSession(cart.totalPrice, user.stripeCustomerId);
     return url;
+  }
+
+  async successPayment(req) {
+    const cart: CartDocument = await this.getCart(req.user.userId);
+    for (const item of cart.items) {
+      const product = this.productService.updateProduct(item.productId, {isSold: true});
+    }
+    return cart;
   }
 }

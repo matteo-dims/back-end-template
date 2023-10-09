@@ -9,13 +9,7 @@ export class Item {
   productId: string;
 
   @Prop()
-  name: string;
-
-  @Prop()
   quantity: number;
-
-  @Prop()
-  price: number;
 
   @Prop()
   subTotalPrice: number;

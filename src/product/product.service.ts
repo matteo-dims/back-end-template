@@ -63,14 +63,15 @@ export class ProductService {
       const awsResponse = await this.s3manage.uploadFile(file);
       createProductDTO.imgUrl = file.originalname;
     }
+    createProductDTO.isSold = false;
     const newProduct = await this.productModel.create(createProductDTO);
     return newProduct.save();
   }
 
   async updateProduct(
     id: string,
-    createProductDTO: CreateProductDTO,
-    file: Express.Multer.File
+    createProductDTO: Partial<CreateProductDTO>,
+    file?: Express.Multer.File
   ): Promise<Product> {
     if (file) {
       const awsResponse = await this.s3manage.uploadFile(file);

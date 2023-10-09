@@ -1,6 +1,7 @@
-import { IsNumber, IsOptional, IsString } from "class-validator";
+import { IsBoolean, IsNumber, IsOptional, IsString } from "class-validator";
 
 import { ApiProperty } from '@nestjs/swagger';
+import { bool } from "aws-sdk/clients/signer";
 
 export class CreateProductDTO {
   @ApiProperty({
@@ -11,7 +12,6 @@ export class CreateProductDTO {
   name: string;
 
   @IsString()
-
   @ApiProperty({
     example: 'Description of a product.',
     required: true
@@ -19,7 +19,6 @@ export class CreateProductDTO {
   description: string;
 
   @IsString()
-
   @ApiProperty({
     example: '150',
     required: true
@@ -36,6 +35,9 @@ export class CreateProductDTO {
 
   @IsString()
   @IsOptional()
-
   imgUrl?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isSold: bool;
 }

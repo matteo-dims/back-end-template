@@ -1,4 +1,4 @@
-import { IsArray, IsOptional, IsString } from "class-validator";
+import { IsOptional, IsString } from "class-validator";
 
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -25,11 +25,11 @@ export class CreateUserDTO {
     required: true
  })
   password: string;
+  
   roles: string[];
 
   @IsString()
   @IsOptional()
-  
   stripeCustomerId: string;
 }
 

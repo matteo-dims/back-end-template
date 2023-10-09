@@ -61,12 +61,19 @@ export class CartController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Post('/pay/:id')
+  @Post('/pay/')
   @ApiOperation({ summary: 'Pay for the cart' })
-  @ApiParam({ name: 'id', type: String })
-  @ApiResponse({ status: 200, description: 'Payment successful', type: String })
-  async payCart(@Param('id') cartId: string, @Request() req) {
-    const payment_url = await this.cartService.payCart(cartId, req);
+  @ApiResponse({ status: 200, description: 'Payment link provided', type: String })
+  async payCart(@Request() req) {
+    const payment_url = await this.cartService.payCart(req);
     return {payment_url: payment_url};
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('/pay/success')
+  @ApiOperation({ summary: 'Payment successfull, update the products in consequences.' })
+  @ApiResponse({ status: 200, description: 'Cart updated', type: String })
+  async paymentSuccessfull(@Request() req) {
+    return await this.cartService.successPayment(req);
   }
 }
