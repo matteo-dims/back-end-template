@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpException,
+  HttpStatus,
   Post,
   Request,
   UseGuards,
@@ -30,7 +32,11 @@ export class AuthController {
   @ApiBody({ type: CreateUserDTO }) // Define the request body
   @ApiResponse({ status: 201, description: 'User registered successfully' })
   async register(@Body() createUserDTO: CreateUserDTO) {
-    return await this.userService.addUser(createUserDTO);
+    try {
+      return await this.userService.addUser(createUserDTO);
+    } catch (error) {
+      throw new HttpException(error.message, error.statusCode);
+    }
   }
 
   @UseGuards(LocalAuthGuard)
@@ -38,8 +44,11 @@ export class AuthController {
   @ApiOperation({ summary: 'Login' })
   @ApiResponse({ status: 200, description: 'Login successful' })
   async login(@Request() req) {
-    console.log(req.user);
-    return this.authService.login(req.user);
+    try {
+      return this.authService.login(req.user);
+    } catch (error) {
+      throw new HttpException(error.message, error.statusCode);
+    }
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
