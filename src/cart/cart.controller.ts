@@ -24,7 +24,7 @@ export class CartController {
   constructor(private cartService: CartService) { }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.User, Role.Admin)
+  @Roles(Role.User)
   @Post('/')
   @ApiOperation({ summary: 'Add an item to the cart' })
   @ApiBody({ type: ItemDTO })
@@ -60,7 +60,8 @@ export class CartController {
     return cart;
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.User)
   @Post('/pay/')
   @ApiOperation({ summary: 'Pay for the cart' })
   @ApiResponse({ status: 200, description: 'Payment link provided', type: String })
@@ -69,7 +70,8 @@ export class CartController {
     return {payment_url: payment_url};
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.User)
   @Post('/pay/success')
   @ApiOperation({ summary: 'Payment successfull, update the products in consequences.' })
   @ApiResponse({ status: 200, description: 'Cart updated', type: String })

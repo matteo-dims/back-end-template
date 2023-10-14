@@ -10,6 +10,7 @@ import {
   UseInterceptors,
   Put,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDTO } from './dtos/create-product.dto';
@@ -17,6 +18,10 @@ import { FilterProductDTO } from './dtos/filter-product.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { Product, ProductDocument } from './schemas/product.schema';
+import { JwtAuthGuard } from 'src/auth/guards/jwt.guard';
+import { Roles } from 'src/auth/decorators/roles.decorator';
+import { Role } from 'src/auth/enums/role.enum';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
 
 
 @ApiTags('Products')
@@ -49,6 +54,8 @@ export class ProductController {
     return product;
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Admin)
   @Post('/')
   @ApiOperation({ summary: 'Add a new product' })
   @ApiBody({ type: CreateProductDTO })
@@ -58,6 +65,8 @@ export class ProductController {
     return await this.productService.addProduct(createProductDTO, file);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Admin)
   @Put('/:id')
   @ApiOperation({ summary: 'Update a product by ID' })
   @ApiParam({ name: 'id', type: String })
@@ -78,6 +87,8 @@ export class ProductController {
     return product;
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Admin)
   @Delete('/:id')
   @ApiOperation({ summary: 'Delete a product by ID' })
   @ApiParam({ name: 'id', type: String })
