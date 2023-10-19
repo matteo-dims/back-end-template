@@ -1,15 +1,19 @@
 # Use an official MongoDB image as the base image
-FROM mongo:latest
+# FROM mongo:latest
+# Base image
+FROM node:16-alpine
 
-# Set environment variables (optional)
-ENV MONGO_INITDB_ROOT_USERNAME=root
-ENV MONGO_INITDB_ROOT_PASSWORD=root
+# Create app directory
+WORKDIR /app
 
-# Create a directory to store MongoDB data (optional)
-RUN mkdir -p /data/db
+# A wildcard is used to ensure both package.json AND package-lock.json are copied
+COPY package*.json ./
 
-# Expose MongoDB port
-EXPOSE 27017
+# Install app dependencies
+RUN yarn install
 
-# Start MongoDB when the container runs
-CMD ["mongod"]
+# Bundle app source
+COPY . .
+
+# Creates a "dist" folder with the production build
+# RUN npm run start:prod

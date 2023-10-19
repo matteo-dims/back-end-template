@@ -7,6 +7,7 @@ import { StripeService } from 'src/stripe/stripe.service';
 import { UserService } from 'src/user/user.service';
 import { ProductService } from 'src/product/product.service';
 import { CartState } from './enums/cartState.enum';
+import { ErrorTemplate } from 'src/utils/error.dto';
 
 @Injectable()
 export class CartService {
@@ -32,8 +33,13 @@ export class CartService {
     return newCart;
   }
 
+  async getAllCarts(): Promise<CartDocument[]> {
+    const cart = await this.cartModel.find().exec();
+    return cart;
+  }
+
   async getCart(userId: string): Promise<CartDocument> {
-    const cart = await this.cartModel.findOne({ userId });
+    const cart = await this.cartModel.findOne({ userId, cartState: CartState.Normal });
     return cart;
   }
 
@@ -102,6 +108,9 @@ export class CartService {
 
   async payCart(req) {
     const cart: CartDocument = await this.getCart(req.user.userId);
+    if (!cart) {
+      throw new ErrorTemplate('Internal error', 500);
+    }
     const user = await this.userService.findUserById(req.user.userId);
     const url: string = await this.stripeService.createCheckoutSession(cart.totalPrice, user.stripeCustomerId);
     cart.cartState = CartState.Pending;

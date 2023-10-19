@@ -7,6 +7,7 @@ import {
   Delete,
   NotFoundException,
   Param,
+  Get,
 } from '@nestjs/common';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { Role } from 'src/auth/enums/role.enum';
@@ -24,7 +25,34 @@ export class CartController {
   constructor(private cartService: CartService) { }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.User)
+  @Roles(Role.User, Role.Admin)
+  @Get('/')
+  @ApiOperation({ summary: 'Get the cart of a user by userId.' })
+  @ApiResponse({ status: 200, description: 'Cart got.' })
+  async getUserCart(@Request() req) {
+    const userId = req.user.userId;
+    const cart = await this.cartService.getCart(userId);
+    if (!cart) {
+      return {error: 'This user has not any cart.'};
+    }
+    return cart;
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Admin)
+  @Get('/all')
+  @ApiOperation({ summary: 'Get the cart of a user by userId.' })
+  @ApiResponse({ status: 200, description: 'Cart got.' })
+  async getAllCart(@Request() req) {
+    const cart = await this.cartService.getAllCarts();
+    if (!cart) {
+      return {error: 'This user has not any cart.'};
+    }
+    return cart;
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.User, Role.Admin)
   @Post('/')
   @ApiOperation({ summary: 'Add an item to the cart' })
   @ApiBody({ type: ItemDTO })
@@ -36,7 +64,7 @@ export class CartController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.User)
+  @Roles(Role.User, Role.Admin)
   @Delete('/')
   @ApiOperation({ summary: 'Remove an item from the cart' })
   @ApiBody({ type: String })
@@ -49,7 +77,7 @@ export class CartController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.User)
+  @Roles(Role.User, Role.Admin)
   @Delete('/:id')
   @ApiOperation({ summary: 'Delete the entire cart by user ID' })
   @ApiParam({ name: 'id', type: String })
@@ -61,7 +89,7 @@ export class CartController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.User)
+  @Roles(Role.User, Role.Admin)
   @Post('/pay/')
   @ApiOperation({ summary: 'Pay for the cart' })
   @ApiResponse({ status: 200, description: 'Payment link provided', type: String })
@@ -71,7 +99,7 @@ export class CartController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.User)
+  @Roles(Role.User, Role.Admin)
   @Post('/pay/success')
   @ApiOperation({ summary: 'Payment successfull, update the products in consequences.' })
   @ApiResponse({ status: 200, description: 'Cart updated', type: String })

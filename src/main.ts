@@ -7,6 +7,11 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(new ValidationPipe());
 
+  app.enableCors({
+    origin: [
+      'http://localhost:3000',
+    ],
+  });
   const options = new DocumentBuilder()
     .setTitle('Back-end Template Documentation')
     .setDescription('All routes of a e-commerce website')
@@ -18,6 +23,6 @@ async function bootstrap() {
 const document = SwaggerModule.createDocument(app, options);
   SwaggerModule.setup('api-docs', app, document);
 
-  await app.listen(3000);
+  await app.listen(process.env.APP_PORT);
 }
 bootstrap();
