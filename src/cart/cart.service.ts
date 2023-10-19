@@ -5,6 +5,9 @@ import { Cart, CartDocument } from './schemas/cart.schema';
 import { ItemDTO } from './dtos/item.dto';
 import { StripeService } from 'src/stripe/stripe.service';
 import { UserService } from 'src/user/user.service';
+import { ProductService } from 'src/product/product.service';
+import { CartState } from './enums/cartState.enum';
+import { ErrorTemplate } from 'src/utils/error.dto';
 
 @Injectable()
 export class CartService {
@@ -12,6 +15,7 @@ export class CartService {
     @InjectModel('Cart') private readonly cartModel: Model<CartDocument>,
     private readonly stripeService: StripeService,
     private readonly userService: UserService,
+    private readonly productService: ProductService,
   ) {}
 
   async createCart(
@@ -24,12 +28,18 @@ export class CartService {
       userId,
       items: [{ ...itemDTO, subTotalPrice }],
       totalPrice,
+      cartState: CartState.Normal
     });
     return newCart;
   }
 
+  async getAllCarts(): Promise<CartDocument[]> {
+    const cart = await this.cartModel.find().exec();
+    return cart;
+  }
+
   async getCart(userId: string): Promise<CartDocument> {
-    const cart = await this.cartModel.findOne({ userId });
+    const cart = await this.cartModel.findOne({ userId, cartState: CartState.Normal });
     return cart;
   }
 
@@ -38,17 +48,17 @@ export class CartService {
     return deletedCart;
   }
 
-  private recalculateCart(cart: CartDocument) {
+  private async recalculateCart(cart: CartDocument) {
     cart.totalPrice = 0;
-    cart.items.forEach((item) => {
-      cart.totalPrice += item.quantity * item.price;
-      console.log('quantity : ' + item.quantity);
-      console.log('price : ' + item.price);
-    });
+    for (const item of cart.items) {
+      let price = (await this.productService.getProduct(item.productId)).price;
+      cart.totalPrice += item.quantity * price;
+    }
   }
 
   async addItemToCart(userId: string, itemDTO: ItemDTO): Promise<Cart> {
-    const { productId, quantity, price } = itemDTO;
+    const { productId, quantity } = itemDTO;
+    const price = (await this.productService.getProduct(productId)).price;
     const subTotalPrice = quantity * price;
 
     const cart = await this.getCart(userId);
@@ -61,14 +71,14 @@ export class CartService {
       if (itemIndex > -1) {
         const item = cart.items[itemIndex];
         item.quantity = Number(item.quantity) + Number(quantity);
-        item.subTotalPrice = item.quantity * item.price;
+        item.subTotalPrice = item.quantity * price;
 
         cart.items[itemIndex] = item;
-        this.recalculateCart(cart);
+        await this.recalculateCart(cart);
         return cart.save();
       } else {
         cart.items.push({ ...itemDTO, subTotalPrice });
-        this.recalculateCart(cart);
+        await this.recalculateCart(cart);
         return cart.save();
       }
     } else {
@@ -77,6 +87,7 @@ export class CartService {
         itemDTO,
         subTotalPrice,
         price * quantity,
+
       );
       return newCart;
     }
@@ -95,10 +106,25 @@ export class CartService {
     }
   }
 
-  async payCart(cartId: string, req) {
+  async payCart(req) {
     const cart: CartDocument = await this.getCart(req.user.userId);
+    if (!cart) {
+      throw new ErrorTemplate('Internal error', 500);
+    }
     const user = await this.userService.findUserById(req.user.userId);
     const url: string = await this.stripeService.createCheckoutSession(cart.totalPrice, user.stripeCustomerId);
+    cart.cartState = CartState.Pending;
+    cart.save();
     return url;
+  }
+
+  async successPayment(req) {
+    const cart: CartDocument = await this.getCart(req.user.userId);
+    for (const item of cart.items) {
+      const product = this.productService.updateProduct(item.productId, {isSold: true});
+    }
+    cart.cartState = CartState.Paid;
+    cart.save();
+    return cart;
   }
 }

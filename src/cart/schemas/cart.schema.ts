@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, SchemaTypes } from 'mongoose';
 import { Item } from './item.schema';
+import { CartState } from '../enums/cartState.enum';
 
 export type CartDocument = Cart & Document;
 
@@ -14,6 +15,9 @@ export class Cart {
 
   @Prop()
   totalPrice: number;
+
+  @Prop()
+  cartState: CartState;
 }
 
 export const CartSchema = SchemaFactory.createForClass(Cart);

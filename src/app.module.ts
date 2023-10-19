@@ -11,7 +11,7 @@ import { StripeModule } from './stripe/stripe.module';
 
 @Module({
   imports: [
-    MongooseModule.forRoot('mongodb://root:root@localhost:27017', {dbName: 'store'}),
+    MongooseModule.forRoot(process.env.MONGODB_URL, {dbName: 'store'}),
     ProductModule,
     UserModule,
     AuthModule,
