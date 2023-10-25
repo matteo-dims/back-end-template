@@ -19,7 +19,7 @@ export class UserService {
     try {
       const user = await this.userModel.findOne({email: createUserDTO.email});
       if (user) {
-        throw new ErrorTemplate('Bad request: User with this email already exist.', 400);
+        throw new ErrorTemplate(400, 'Bad request: User with this email already exist.', 'User');
       }
       const stripeCustomer = await this.stripeService.createCustomer(createUserDTO.username, createUserDTO.email);
       createUserDTO.stripeCustomerId = stripeCustomer.id;
@@ -33,7 +33,7 @@ export class UserService {
       if (error instanceof ErrorTemplate)
         throw error;
       else
-        throw new ErrorTemplate('Internal server error', 500);
+      throw new ErrorTemplate(500, error.message || 'Can\'t create a new user.', 'User');
     } 
   }
 

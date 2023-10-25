@@ -1,6 +1,7 @@
-import { IsNumber, IsString } from "class-validator";
+import { IsNumber, IsObject, IsOptional, IsString } from "class-validator";
 
 import { ApiProperty } from '@nestjs/swagger';
+import { Product } from "src/product/schemas/product.schema";
 
 export class ItemDTO {
   @IsString()
@@ -9,7 +10,7 @@ export class ItemDTO {
     required: true
   })
   productId: string;
-  
+
   @IsString()
   @ApiProperty({
     example: '3',

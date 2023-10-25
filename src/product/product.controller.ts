@@ -34,13 +34,17 @@ export class ProductController {
   @ApiQuery({ name: 'filterProductDTO', type: FilterProductDTO, required: false })
   @ApiResponse({ status: 200, description: 'Return a list of products', isArray: true })
   async getProducts(@Query() filterProductDTO: FilterProductDTO) {
-    if (Object.keys(filterProductDTO).length) {
-      const filteredProducts =
-        await this.productService.getFilteredProducts(filterProductDTO);
-      return filteredProducts;
-    } else {
-      const allProducts = await this.productService.getAllProducts();
-      return allProducts;
+    try {
+      if (Object.keys(filterProductDTO).length) {
+        const filteredProducts =
+          await this.productService.getFilteredProducts(filterProductDTO);
+        return filteredProducts;
+      } else {
+        const allProducts = await this.productService.getAllProducts();
+        return allProducts;
+      }
+    } catch(error) {
+      return error;
     }
   }
 
@@ -49,9 +53,13 @@ export class ProductController {
   @ApiParam({ name: 'id', type: String })
   @ApiResponse({ status: 200, description: 'Return a product by ID', type: Product })
   async getProduct(@Param('id') id: string) {
-    const product = await this.productService.getProduct(id);
-    if (!product) throw new NotFoundException('Product does not exist!');
-    return product;
+    try {
+      const product = await this.productService.getProduct(id);
+      if (!product) throw new NotFoundException('Product does not exist!');
+      return product;
+    } catch(error) {
+      return error;
+    }
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -62,7 +70,11 @@ export class ProductController {
   @ApiResponse({ status: 201, description: 'Product added successfully', type: Product })
   @UseInterceptors(FileInterceptor('file'))
   async addProduct(@Body() createProductDTO: CreateProductDTO, @UploadedFile() file: Express.Multer.File) {
-    return await this.productService.addProduct(createProductDTO, file);
+    try {
+      return await this.productService.addProduct(createProductDTO, file);
+    } catch(error) {
+      return error;
+    }
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -78,13 +90,17 @@ export class ProductController {
     @Body() createProductDTO: CreateProductDTO,
     @UploadedFile() file: Express.Multer.File
   ) {
-    const product = await this.productService.updateProduct(
-      id,
-      createProductDTO,
-      file
-    );
-    if (!product) throw new NotFoundException('Product does not exist!');
-    return product;
+    try {
+      const product = await this.productService.updateProduct(
+        id,
+        createProductDTO,
+        file
+      );
+      if (!product) throw new NotFoundException('Product does not exist!');
+      return product;
+    } catch(error) {
+      return error;
+    }
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -94,8 +110,12 @@ export class ProductController {
   @ApiParam({ name: 'id', type: String })
   @ApiResponse({ status: 200, description: 'Product deleted successfully', type: Product })
   async deleteProduct(@Param('id') id: string) {
-    const product = await this.productService.deleteProduct(id);
-    if (!product) throw new NotFoundException('Product does not exist');
-    return product;
+    try {
+      const product = await this.productService.deleteProduct(id);
+      if (!product) throw new NotFoundException('Product does not exist');
+      return product;
+    } catch(error) {
+      return error;
+    }
   }
 }
