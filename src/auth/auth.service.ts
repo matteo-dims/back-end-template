@@ -13,6 +13,9 @@ export class AuthService {
 
   async validateUser(username: string, password: string): Promise<any> {
     const user = await this.userService.findUser(username);
+    if (!user)
+      return null;
+    console.log('test ici ça passe zebi')
     const isPasswordMatch = await bcrypt.compare(password, user.password);
     if (user && isPasswordMatch) {
       return user;
@@ -22,6 +25,9 @@ export class AuthService {
 
   async login(user: any) {
     try {
+      const userCheck = await this.userService.findUser(user.username);
+      if (!userCheck)
+        return {error: 'This user doesn\'t exist.'};
       const payload = {
         username: user.username,
         sub: user._id,
@@ -31,7 +37,7 @@ export class AuthService {
         access_token: this.jwtService.sign(payload),
       };
     } catch (error) {
-      throw new ErrorTemplate('Internal error', 500);
+      throw new ErrorTemplate(500, 'Internal error', 'auth');
     }
   }
 }
