@@ -16,13 +16,15 @@ import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { CartService } from './cart.service';
 import { ItemDTO } from './dtos/item.dto';
 import { ApiTags, ApiResponse, ApiBearerAuth, ApiOperation, ApiParam, ApiBody } from '@nestjs/swagger';
+import { CartBulkDTO } from './dtos/cartBulk.dto';
+import { ProductService } from 'src/product/product.service';
 
 @ApiTags('Cart')
 @Controller('cart')
 @ApiBearerAuth()
 
 export class CartController {
-  constructor(private cartService: CartService) { }
+  constructor(private cartService: CartService, private readonly productService: ProductService) { }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.User, Role.Admin)
@@ -36,7 +38,30 @@ export class CartController {
       if (!cart) {
         return {error: 'This user has not any cart.'};
       }
-      return cart;
+      let transformedCart: CartBulkDTO = new CartBulkDTO();
+        transformedCart.items = [];
+        transformedCart._id = cart._id;
+        transformedCart.cartState = cart.cartState;
+        transformedCart.totalPrice = cart.totalPrice;
+        transformedCart.userId = cart.userId;
+        for (let item of cart.items) {
+          const product = await this.productService.getProduct(item.productId);
+            transformedCart.items.push(
+              {
+                product: {
+                  _id: item.productId,
+                  name: product.name,
+                  description: product.description,
+                  price: product.price,
+                  category: product.category,
+                  isSold: product.isSold,
+                },
+                quantity: item.quantity,
+                subTotalPrice: item.subTotalPrice,
+            }
+            )
+        }
+      return transformedCart;
     } catch(error) {
       return error;
     }

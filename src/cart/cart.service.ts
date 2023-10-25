@@ -8,6 +8,7 @@ import { UserService } from 'src/user/user.service';
 import { ProductService } from 'src/product/product.service';
 import { CartState } from './enums/cartState.enum';
 import { ErrorTemplate } from 'src/utils/error.dto';
+import { CartBulkDTO } from './dtos/cartBulk.dto';
 
 @Injectable()
 export class CartService {
@@ -40,10 +41,37 @@ export class CartService {
     }
   }
 
-  async getAllCarts(): Promise<CartDocument[]> {
+  async getAllCarts(): Promise<CartBulkDTO[]> {
     try {
       const carts = await this.cartModel.find().exec();
-      return carts;
+      let finalCarts: CartBulkDTO[] = [];
+      for (let cart of carts) {
+        let tmpCart: CartBulkDTO = new CartBulkDTO();
+        tmpCart.items = [];
+        tmpCart._id = cart._id;
+        tmpCart.cartState = cart.cartState;
+        tmpCart.totalPrice = cart.totalPrice;
+        tmpCart.userId = cart.userId;
+        for (let item of cart.items) {
+          const product = await this.productService.getProduct(item.productId);
+            tmpCart.items.push(
+              {
+                product: {
+                  _id: item.productId,
+                  name: product.name,
+                  description: product.description,
+                  price: product.price,
+                  category: product.category,
+                  isSold: product.isSold,
+                },
+                quantity: item.quantity,
+                subTotalPrice: item.subTotalPrice,
+            }
+            )
+        }
+        finalCarts.push(tmpCart);
+      }
+      return finalCarts;
     } catch (error) {
       if (error instanceof ErrorTemplate)
         throw error;
