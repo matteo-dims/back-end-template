@@ -42,7 +42,7 @@ export class StripeService {
               ],
               customer: customerId,
               mode: "payment",
-            return_url: process.env.ENV === 'dev' ? "http://localhost:3001/getCart/status" : "https://template-front.vercel.app/getCart/status",
+            return_url: process.env.ENV === 'dev' ? "http://localhost:3001/getCart/status?session_id={CHECKOUT_SESSION_ID}" : "https://template-front.vercel.app/getCart/status?session_id={CHECKOUT_SESSION_ID}",
         });
           return stripeResponse.client_secret;
       } catch (error) {
