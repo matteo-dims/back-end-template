@@ -30,7 +30,7 @@ export class UserService {
       if (createUserDTO.roles === null || createUserDTO.roles === undefined) {
         newUser.roles = ['user'];
       }
-      await this.mailerService.sendUserConfirmation(createUserDTO.email, createUserDTO.username);
+      await this.mailerService.sendUserConfirmation(newUser.email, newUser.username);
       return newUser.save();
     } catch (error) {
       if (error instanceof ErrorTemplate)
