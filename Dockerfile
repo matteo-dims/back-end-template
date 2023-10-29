@@ -1,7 +1,7 @@
 # Use an official MongoDB image as the base image
 # FROM mongo:latest
 # Base image
-FROM node:16-alpine
+FROM node:21-alpine3.17
 
 # Create app directory
 WORKDIR /app

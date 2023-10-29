@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import {MailerService} from "@nestjs-modules/mailer";
 @Injectable()
 export class MailService {
-    constructor(private mailerService: MailerService) {}
+    constructor(private readonly mailerService: MailerService) {
+    }
 
     async sendUserConfirmation(email: string, name: string) {
         const url: string = `https://bestofy.fr`;
