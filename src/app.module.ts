@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { CartModule } from './cart/cart.module';
 import { S3ManagerModule } from './s3-manager/s3-manager.module';
 import { StripeModule } from './stripe/stripe.module';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { StripeModule } from './stripe/stripe.module';
     CartModule,
     S3ManagerModule,
     StripeModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

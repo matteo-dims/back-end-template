@@ -6,6 +6,7 @@ import { CreateUserDTO } from './dtos/create-user.dto';
 import * as bcrypt from 'bcrypt';
 import { StripeService } from 'src/stripe/stripe.service';
 import { ErrorTemplate } from 'src/utils/error.dto';
+import {MailService} from "../mail/mail.service";
 
 @Injectable()
 export class UserService {
@@ -13,6 +14,7 @@ export class UserService {
     @InjectModel('User')
     private readonly userModel: Model<UserDocument>,
     private readonly stripeService: StripeService,
+    private readonly mailerService: MailService,
   ) {}
 
   async addUser(createUserDTO: CreateUserDTO): Promise<User> {
@@ -28,6 +30,7 @@ export class UserService {
       if (createUserDTO.roles === null || createUserDTO.roles === undefined) {
         newUser.roles = ['user'];
       }
+      await this.mailerService.sendUserConfirmation(createUserDTO.email, createUserDTO.username);
       return newUser.save();
     } catch (error) {
       if (error instanceof ErrorTemplate)
