@@ -1,14 +1,14 @@
-import { Injectable } from '@nestjs/common';
-import { Model } from 'mongoose';
-import { InjectModel } from '@nestjs/mongoose';
-import { Cart, CartDocument } from './schemas/cart.schema';
-import { ItemDTO } from './dtos/item.dto';
-import { StripeService } from 'src/stripe/stripe.service';
-import { UserService } from 'src/user/user.service';
-import { ProductService } from 'src/product/product.service';
-import { CartState } from './enums/cartState.enum';
-import { ErrorTemplate } from 'src/utils/error.dto';
-import { CartBulkDTO } from './dtos/cartBulk.dto';
+import {Injectable} from '@nestjs/common';
+import {Model} from 'mongoose';
+import {InjectModel} from '@nestjs/mongoose';
+import {Cart, CartDocument} from './schemas/cart.schema';
+import {ItemDTO} from './dtos/item.dto';
+import {StripeService} from 'src/stripe/stripe.service';
+import {UserService} from 'src/user/user.service';
+import {ProductService} from 'src/product/product.service';
+import {CartState} from './enums/cartState.enum';
+import {ErrorTemplate} from 'src/utils/error.dto';
+import {CartBulkDTO} from './dtos/cartBulk.dto';
 
 @Injectable()
 export class CartService {
@@ -26,13 +26,12 @@ export class CartService {
     totalPrice: number,
   ): Promise<Cart> {
     try {
-      const newCart = await this.cartModel.create({
+      return await this.cartModel.create({
         userId,
-        items: [{ ...itemDTO, subTotalPrice }],
+        items: [{...itemDTO, subTotalPrice}],
         totalPrice,
         cartState: CartState.Normal
       });
-      return newCart;
     } catch (error) {
       if (error instanceof ErrorTemplate)
         throw error;
@@ -83,8 +82,18 @@ export class CartService {
 
   async getCart(userId: string): Promise<CartDocument> {
     try {
-      const cart = await this.cartModel.findOne({ userId, cartState: CartState.Normal });
-      return cart;
+      return await this.cartModel.findOne({userId, cartState: CartState.Normal});
+    } catch (error) {
+      if (error instanceof ErrorTemplate)
+        throw error;
+      else
+        throw new ErrorTemplate(400, error.message || `Can\'t get cart for user : ${userId}.`, 'Cart');
+    }
+  }
+
+  async getAllCartOfUser(userId: string): Promise<CartDocument[]> {
+    try {
+      return await this.cartModel.find({userId});
     } catch (error) {
       if (error instanceof ErrorTemplate)
         throw error;
@@ -95,8 +104,7 @@ export class CartService {
 
   async deleteCart(userId: string): Promise<Cart> {
     try {
-      const deletedCart = await this.cartModel.findOneAndRemove({ userId });
-      return deletedCart;
+      return await this.cartModel.findOneAndRemove({userId});
     } catch (error) {
       if (error instanceof ErrorTemplate)
         throw error;
@@ -140,13 +148,12 @@ export class CartService {
           return cart.save();
         }
       } else {
-        const newCart = await this.createCart(
-          userId,
-          itemDTO,
-          subTotalPrice,
-          price * quantity,
+        return await this.createCart(
+            userId,
+            itemDTO,
+            subTotalPrice,
+            price * quantity,
         );
-        return newCart;
       }
     }  catch (error) {
       if (error instanceof ErrorTemplate)
@@ -195,15 +202,23 @@ export class CartService {
     }
   }
 
-  async successPayment(req) {
+  async statusPayment(req, sessionId: string) {
     try {
-      const cart: CartDocument = await this.getCart(req.user.userId);
-      for (const item of cart.items) {
-        const product = this.productService.updateProduct(item.productId, {isSold: true});
+      const cart: CartDocument[] = await this.getAllCartOfUser(req.user.userId);
+      const rightCart = cart.find((element) => {
+        return element.cartState === CartState.Pending
+      });
+      const stripeResponse = await this.stripeService.checkCheckoutStatusSession(sessionId);
+      if (stripeResponse.status === 'open') {
+        rightCart.cartState = CartState.Normal;
+      } else if (stripeResponse.status === 'complete') {
+        for (const item of rightCart.items) {
+          await this.productService.updateProduct(item.productId, {isSold: true});
+        }
+        rightCart.cartState = CartState.Paid;
       }
-      cart.cartState = CartState.Paid;
-      cart.save();
-      return cart;
+      rightCart.save();
+      return stripeResponse;
     } catch (error) {
       if (error instanceof ErrorTemplate)
         throw error;

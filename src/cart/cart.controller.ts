@@ -1,23 +1,13 @@
-import {
-  Controller,
-  Post,
-  Body,
-  Request,
-  UseGuards,
-  Delete,
-  NotFoundException,
-  Param,
-  Get,
-} from '@nestjs/common';
-import { Roles } from 'src/auth/decorators/roles.decorator';
-import { Role } from 'src/auth/enums/role.enum';
-import { JwtAuthGuard } from 'src/auth/guards/jwt.guard';
-import { RolesGuard } from 'src/auth/guards/roles.guard';
-import { CartService } from './cart.service';
-import { ItemDTO } from './dtos/item.dto';
-import { ApiTags, ApiResponse, ApiBearerAuth, ApiOperation, ApiParam, ApiBody } from '@nestjs/swagger';
-import { CartBulkDTO } from './dtos/cartBulk.dto';
-import { ProductService } from 'src/product/product.service';
+import {Body, Controller, Delete, Get, NotFoundException, Param, Post, Request, UseGuards,} from '@nestjs/common';
+import {Roles} from 'src/auth/decorators/roles.decorator';
+import {Role} from 'src/auth/enums/role.enum';
+import {JwtAuthGuard} from 'src/auth/guards/jwt.guard';
+import {RolesGuard} from 'src/auth/guards/roles.guard';
+import {CartService} from './cart.service';
+import {ItemDTO} from './dtos/item.dto';
+import {ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags} from '@nestjs/swagger';
+import {CartBulkDTO} from './dtos/cartBulk.dto';
+import {ProductService} from 'src/product/product.service';
 
 @ApiTags('Cart')
 @Controller('cart')
@@ -74,8 +64,7 @@ export class CartController {
   @ApiResponse({ status: 200, description: 'Cart got.' })
   async getAllCart(@Request() req) {
     try {
-      const cart = await this.cartService.getAllCarts();
-      return cart;
+      return await this.cartService.getAllCarts();
     } catch(error) {
       return error;
     }
@@ -90,8 +79,7 @@ export class CartController {
   async addItemToCart(@Request() req, @Body() itemDTO: ItemDTO) {
     try {
       const userId = req.user.userId;
-      const cart = await this.cartService.addItemToCart(userId, itemDTO);
-      return cart;
+      return await this.cartService.addItemToCart(userId, itemDTO);
     } catch(error) {
       return error;
     }
@@ -132,13 +120,13 @@ export class CartController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.User, Role.Admin)
-  @Post('/pay/')
+  @Post('/pay')
   @ApiOperation({ summary: 'Pay for the cart' })
   @ApiResponse({ status: 200, description: 'Payment link provided', type: String })
   async payCart(@Request() req) {
     try {
-      const payment_url = await this.cartService.payCart(req);
-      return {payment_url: payment_url};
+      const client_secret = await this.cartService.payCart(req);
+      return {clientSecret: client_secret};
     } catch(error) {
       return error;
     }
@@ -146,12 +134,12 @@ export class CartController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.User, Role.Admin)
-  @Post('/pay/success')
-  @ApiOperation({ summary: 'Payment successfull, update the products in consequences.' })
+  @Post('/pay/status/:id')
+  @ApiOperation({summary: 'Get && update status on a users cart.'})
   @ApiResponse({ status: 200, description: 'Cart updated', type: String })
-  async paymentSuccessfull(@Request() req) {
+  async paymentStatus(@Request() req, @Param('id') sessionId: string) {
     try {
-      return await this.cartService.successPayment(req);
+      return await this.cartService.statusPayment(req, sessionId);
     } catch(error) {
       return error;
     }
