@@ -27,6 +27,7 @@ export class StripeService {
     public async createCheckoutSession(amount: number, customerId: string) {
       try {
         const stripeResponse = await this.stripe.checkout.sessions.create({
+            ui_mode: 'embedded',
             line_items: [
                 {
                   price_data: {
@@ -41,12 +42,20 @@ export class StripeService {
               ],
               customer: customerId,
               mode: "payment",
-              success_url: "https://www.google.com",
-              cancel_url: "https://www.bestofy.fr",
+            return_url: process.env.ENV === 'dev' ? "http://localhost:3001/getCart/status?session_id={CHECKOUT_SESSION_ID}" : "https://template-front.vercel.app/getCart/status?session_id={CHECKOUT_SESSION_ID}",
         });
-        return stripeResponse.url;
+          return stripeResponse.client_secret;
       } catch (error) {
         throw new ErrorTemplate(500, error.message || 'Can\'t create a new stripe checkout session.', 'Stripe');
       }
+    }
+
+    public async checkCheckoutStatusSession(sessionId: string) {
+        try {
+            const session = await this.stripe.checkout.sessions.retrieve(sessionId);
+            return ({status: session.status, payment_status: session.payment_status});
+        } catch (error) {
+            throw new ErrorTemplate(500, error.message || `Can\'t validate session: ${sessionId}.`, 'Stripe');
+        }
     }
 }
