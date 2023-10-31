@@ -1,7 +1,7 @@
 # Use an official MongoDB image as the base image
 # FROM mongo:latest
 # Base image
-FROM node:21-alpine3.17
+FROM node:16-alpine
 
 # Create app directory
 WORKDIR /app
@@ -10,7 +10,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install app dependencies
-RUN npm install
+RUN yarn install
 
 # Bundle app source
 COPY . .

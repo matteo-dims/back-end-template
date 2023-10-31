@@ -45,6 +45,7 @@ export class CartController {
                   price: product.price,
                   category: product.category,
                   isSold: product.isSold,
+                  imgUrl: product.imgUrl,
                 },
                 quantity: item.quantity,
                 subTotalPrice: item.subTotalPrice,

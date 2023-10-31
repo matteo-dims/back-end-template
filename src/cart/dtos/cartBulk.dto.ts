@@ -14,6 +14,7 @@ class BulkItemDTO {
     price: number;
     category: string;
     isSold: boolean;
+    imgUrl: string;
   };
   quantity: number;
   subTotalPrice: number;
