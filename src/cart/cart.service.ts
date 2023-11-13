@@ -12,182 +12,15 @@ import {CartBulkDTO} from './dtos/cartBulk.dto';
 
 @Injectable()
 export class CartService {
-  constructor(
-    @InjectModel('Cart') private readonly cartModel: Model<CartDocument>,
-    private readonly stripeService: StripeService,
-    private readonly userService: UserService,
-    private readonly productService: ProductService,
-  ) {}
-
-  async createCart(
-    userId: string,
-    itemDTO: ItemDTO,
-    subTotalPrice: number,
-    totalPrice: number,
-  ): Promise<Cart> {
-    try {
-      return await this.cartModel.create({
-        userId,
-        items: [{...itemDTO, subTotalPrice}],
-        totalPrice,
-        cartState: CartState.Normal
-      });
-    } catch (error) {
-      if (error instanceof ErrorTemplate)
-        throw error;
-      else
-        throw new ErrorTemplate(400, error.message || `Can\'t create a new cart for user : ${userId}.`, 'Cart');
+    constructor(
+        @InjectModel('Cart') private readonly cartModel: Model<CartDocument>,
+        private readonly stripeService: StripeService,
+        private readonly userService: UserService,
+        private readonly productService: ProductService,
+    ) {
     }
-  }
 
-  async getAllCarts(): Promise<CartBulkDTO[]> {
-    try {
-      const carts = await this.cartModel.find().exec();
-      let finalCarts: CartBulkDTO[] = [];
-      for (let cart of carts) {
-        let tmpCart: CartBulkDTO = new CartBulkDTO();
-        tmpCart.items = [];
-        tmpCart._id = cart._id;
-        tmpCart.cartState = cart.cartState;
-        tmpCart.totalPrice = cart.totalPrice;
-        tmpCart.userId = cart.userId;
-        for (let item of cart.items) {
-          const product = await this.productService.getProduct(item.productId);
-            tmpCart.items.push(
-              {
-                product: {
-                  _id: item.productId,
-                  name: product.name,
-                  description: product.description,
-                  price: product.price,
-                  category: product.category,
-                  isSold: product.isSold,
-                  imgUrl: product.imgUrl,
-                },
-                quantity: item.quantity,
-                subTotalPrice: item.subTotalPrice,
-            }
-            )
-        }
-        finalCarts.push(tmpCart);
-      }
-      return finalCarts;
-    } catch (error) {
-      if (error instanceof ErrorTemplate)
-        throw error;
-      else
-        throw new ErrorTemplate(400, error.message || `Can't get carts.`, 'Cart');
-    }
-  }
-  
-
-  async getCart(userId: string): Promise<CartDocument> {
-    try {
-      return await this.cartModel.findOne({userId, cartState: CartState.Normal});
-    } catch (error) {
-      if (error instanceof ErrorTemplate)
-        throw error;
-      else
-        throw new ErrorTemplate(400, error.message || `Can\'t get cart for user : ${userId}.`, 'Cart');
-    }
-  }
-
-  async getAllCartOfUser(userId: string): Promise<CartDocument[]> {
-    try {
-      return await this.cartModel.find({userId});
-    } catch (error) {
-      if (error instanceof ErrorTemplate)
-        throw error;
-      else
-        throw new ErrorTemplate(400, error.message || `Can\'t get cart for user : ${userId}.`, 'Cart');
-    }
-  }
-
-  async deleteCart(userId: string): Promise<Cart> {
-    try {
-      return await this.cartModel.findOneAndRemove({userId});
-    } catch (error) {
-      if (error instanceof ErrorTemplate)
-        throw error;
-      else
-        throw new ErrorTemplate(400, error.message || `Can\'t delete cart for user : ${userId}.`, 'Cart');
-    }
-  }
-
-  private async recalculateCart(cart: CartDocument) {
-    cart.totalPrice = 0;
-    for (const item of cart.items) {
-      let price = (await this.productService.getProduct(item.productId)).price;
-      cart.totalPrice += item.quantity * price;
-    }
-  }
-
-  async addItemToCart(userId: string, itemDTO: ItemDTO): Promise<any> {
-    try {
-
-      const { productId, quantity } = itemDTO;
-      const product = await this.productService.getProduct(productId);
-      const price = product.price;
-      const subTotalPrice = quantity * price;
-  
-      const cart = await this.getCart(userId);
-      if (cart) {
-        const itemIndex = cart.items.findIndex(
-          (item) => item.productId == productId,
-        );
-  
-        if (itemIndex > -1) {
-          const item = cart.items[itemIndex];
-          item.quantity = Number(item.quantity) + Number(quantity);
-          item.subTotalPrice = item.quantity * price;
-          cart.items[itemIndex] = item;
-          await this.recalculateCart(cart);
-          return cart.save();
-        } else {
-          cart.items.push({ ...itemDTO, subTotalPrice });
-          await this.recalculateCart(cart);
-          return cart.save();
-        }
-      } else {
-        return await this.createCart(
-            userId,
-            itemDTO,
-            subTotalPrice,
-            price * quantity,
-        );
-      }
-    }  catch (error) {
-      if (error instanceof ErrorTemplate)
-        throw error;
-      else
-        throw new ErrorTemplate(400, error.message || `Can\'t add a new item in the cart of user : ${userId}.`, 'Cart');
-    }
-  }
-
-  async removeItemFromCart(userId: string, productId: string, quantity: number): Promise<any> {
-    try {
-      const cart = await this.getCart(userId);
-      const product = await this.productService.getProduct(productId);
-      const itemIndex = cart.items.findIndex(
-        (item) => item.productId == productId,
-      );
-
-      if (itemIndex > -1) {
-        if (cart.items[itemIndex].quantity <= quantity) {
-          cart.items.splice(itemIndex, 1);
-          await this.recalculateCart(cart)
-        } else {
-          const item = cart.items[itemIndex];
-          item.quantity = Number(item.quantity) - Number(quantity);
-          item.subTotalPrice -= Number(product.price) * Number(quantity);
-          cart.items[itemIndex] = item;
-          await this.recalculateCart(cart);
-        }
-        if (cart.items.length === 0) {
-          await this.deleteCart(userId);
-          return {cart: null}
-        }
-        await cart.save();
+    async addProductsToCart(cart: CartDocument): Promise<CartBulkDTO> {
         let transformedCart: CartBulkDTO = new CartBulkDTO();
         transformedCart.items = [];
         transformedCart._id = cart._id;
@@ -195,75 +28,224 @@ export class CartService {
         transformedCart.totalPrice = cart.totalPrice;
         transformedCart.userId = cart.userId;
         for (let item of cart.items) {
-          const product = await this.productService.getProduct(item.productId);
-          transformedCart.items.push(
-              {
-                product: {
-                  _id: item.productId,
-                  name: product.name,
-                  description: product.description,
-                  price: product.price,
-                  category: product.category,
-                  isSold: product.isSold,
-                  imgUrl: product.imgUrl,
-                },
-                quantity: item.quantity,
-                subTotalPrice: item.subTotalPrice,
-              }
-          )
+            const product = await this.productService.getProduct(item.productId);
+            transformedCart.items.push(
+                {
+                    product: {
+                        _id: item.productId,
+                        name: product.name,
+                        description: product.description,
+                        price: product.price,
+                        category: product.category,
+                        isSold: product.isSold,
+                        imgUrl: product.imgUrl ? product.imgUrl : undefined,
+                    },
+                    quantity: item.quantity,
+                    subTotalPrice: item.subTotalPrice,
+                }
+            )
         }
         return transformedCart
-      }
-      return null;
-    } catch (error) {
-      if (error instanceof ErrorTemplate)
-        throw error;
-      else
-        throw new ErrorTemplate(400, error.message || `Can\'t remove item : ${productId} from cart for user : ${userId}.`, 'Cart');
     }
-  }
 
-  async payCart(req) {
-    try {
-      const cart: CartDocument = await this.getCart(req.user.userId);
-      if (!cart) {
-        throw new ErrorTemplate(400, `Can\'t find a cart for user : ${req.user.userId}.`, 'Cart');
-      }
-      const user = await this.userService.findUserById(req.user.userId);
-      const url: string = await this.stripeService.createCheckoutSession(cart.totalPrice, user.stripeCustomerId);
-      cart.cartState = CartState.Pending;
-      cart.save();
-      return url;
-    }  catch (error) {
-      if (error instanceof ErrorTemplate)
-        throw error;
-      else
-        throw new ErrorTemplate(400, error.message || `Can\'t create a payment method for user : ${req.user.userId}.`, 'Cart');
-    }
-  }
-
-  async statusPayment(req, sessionId: string) {
-    try {
-      const cart: CartDocument[] = await this.getAllCartOfUser(req.user.userId);
-      const rightCart = cart.find((element) => {
-        return element.cartState === CartState.Pending
-      });
-      const stripeResponse = await this.stripeService.checkCheckoutStatusSession(sessionId);
-      if (stripeResponse.status === 'open') {
-        rightCart.cartState = CartState.Normal;
-      } else if (stripeResponse.status === 'complete') {
-        for (const item of rightCart.items) {
-          await this.productService.updateProduct(item.productId, {isSold: true});
+    async createCart(
+        userId: string,
+        itemDTO: ItemDTO,
+        subTotalPrice: number,
+        totalPrice: number,
+    ): Promise<Cart> {
+        try {
+            return await this.cartModel.create({
+                userId,
+                items: [{...itemDTO, subTotalPrice}],
+                totalPrice,
+                cartState: CartState.Normal
+            });
+        } catch (error) {
+            if (error instanceof ErrorTemplate)
+                throw error;
+            else
+                throw new ErrorTemplate(400, error.message || `Can\'t create a new cart for user : ${userId}.`, 'Cart');
         }
-        rightCart.cartState = CartState.Paid;
-      }
-      rightCart.save();
-      return stripeResponse;
-    } catch (error) {
-      if (error instanceof ErrorTemplate)
-        throw error;
-      else
-        throw new ErrorTemplate(400, error.message || `Can\'t update status of cart for user : ${req.user.userId}.`, 'Cart');
     }
-  }
+
+    async getAllCarts(): Promise<CartBulkDTO[]> {
+        try {
+            const carts = await this.cartModel.find().exec();
+            let finalCarts: CartBulkDTO[] = [];
+            for (let cart of carts) {
+                let tmpCart: CartBulkDTO = await this.addProductsToCart(cart);
+                finalCarts.push(tmpCart);
+            }
+            return finalCarts;
+        } catch (error) {
+            if (error instanceof ErrorTemplate)
+                throw error;
+            else
+                throw new ErrorTemplate(400, error.message || `Can't get carts.`, 'Cart');
+        }
+    }
+
+
+    async getCart(userId: string): Promise<CartDocument> {
+        try {
+            return await this.cartModel.findOne({userId, cartState: CartState.Normal});
+        } catch (error) {
+            if (error instanceof ErrorTemplate)
+                throw error;
+            else
+                throw new ErrorTemplate(400, error.message || `Can\'t get cart for user : ${userId}.`, 'Cart');
+        }
+    }
+
+    async getAllCartOfUser(userId: string): Promise<CartDocument[]> {
+        try {
+            return await this.cartModel.find({userId});
+        } catch (error) {
+            if (error instanceof ErrorTemplate)
+                throw error;
+            else
+                throw new ErrorTemplate(400, error.message || `Can\'t get cart for user : ${userId}.`, 'Cart');
+        }
+    }
+
+    async deleteCart(userId: string): Promise<Cart> {
+        try {
+            return await this.cartModel.findOneAndRemove({userId});
+        } catch (error) {
+            if (error instanceof ErrorTemplate)
+                throw error;
+            else
+                throw new ErrorTemplate(400, error.message || `Can\'t delete cart for user : ${userId}.`, 'Cart');
+        }
+    }
+
+    private async recalculateCart(cart: CartDocument) {
+        cart.totalPrice = 0;
+        for (const item of cart.items) {
+            let price = (await this.productService.getProduct(item.productId)).price;
+            cart.totalPrice += item.quantity * price;
+        }
+    }
+
+    async addItemToCart(userId: string, itemDTO: ItemDTO): Promise<any> {
+        try {
+
+            const {productId, quantity} = itemDTO;
+            const product = await this.productService.getProduct(productId);
+            const price = product.price;
+            const subTotalPrice = quantity * price;
+
+            const cart = await this.getCart(userId);
+            if (cart) {
+                const itemIndex = cart.items.findIndex(
+                    (item) => item.productId == productId,
+                );
+
+                if (itemIndex > -1) {
+                    const item = cart.items[itemIndex];
+                    item.quantity = Number(item.quantity) + Number(quantity);
+                    item.subTotalPrice = item.quantity * price;
+                    cart.items[itemIndex] = item;
+                    await this.recalculateCart(cart);
+                    return cart.save();
+                } else {
+                    cart.items.push({...itemDTO, subTotalPrice});
+                    await this.recalculateCart(cart);
+                    return cart.save();
+                }
+            } else {
+                return await this.createCart(
+                    userId,
+                    itemDTO,
+                    subTotalPrice,
+                    price * quantity,
+                );
+            }
+        } catch (error) {
+            if (error instanceof ErrorTemplate)
+                throw error;
+            else
+                throw new ErrorTemplate(400, error.message || `Can\'t add a new item in the cart of user : ${userId}.`, 'Cart');
+        }
+    }
+
+    async removeItemFromCart(userId: string, productId: string, quantity: number): Promise<any> {
+        try {
+            const cart = await this.getCart(userId);
+            const product = await this.productService.getProduct(productId);
+            const itemIndex = cart.items.findIndex(
+                (item) => item.productId == productId,
+            );
+
+            if (itemIndex > -1) {
+                if (cart.items[itemIndex].quantity <= quantity) {
+                    cart.items.splice(itemIndex, 1);
+                    await this.recalculateCart(cart)
+                } else {
+                    const item = cart.items[itemIndex];
+                    item.quantity = Number(item.quantity) - Number(quantity);
+                    item.subTotalPrice -= Number(product.price) * Number(quantity);
+                    cart.items[itemIndex] = item;
+                    await this.recalculateCart(cart);
+                }
+                if (cart.items.length === 0) {
+                    await this.deleteCart(userId);
+                    return {cart: null}
+                }
+                await cart.save();
+                return await this.addProductsToCart(cart)
+            }
+            return null;
+        } catch (error) {
+            if (error instanceof ErrorTemplate)
+                throw error;
+            else
+                throw new ErrorTemplate(400, error.message || `Can\'t remove item : ${productId} from cart for user : ${userId}.`, 'Cart');
+        }
+    }
+
+    async payCart(req) {
+        try {
+            const cart: CartDocument = await this.getCart(req.user.userId);
+            if (!cart) {
+                throw new ErrorTemplate(400, `Can\'t find a cart for user : ${req.user.userId}.`, 'Cart');
+            }
+            const user = await this.userService.findUserById(req.user.userId);
+            const url: string = await this.stripeService.createCheckoutSession(cart.totalPrice, user.stripeCustomerId);
+            cart.cartState = CartState.Pending;
+            cart.save();
+            return url;
+        } catch (error) {
+            if (error instanceof ErrorTemplate)
+                throw error;
+            else
+                throw new ErrorTemplate(400, error.message || `Can\'t create a payment method for user : ${req.user.userId}.`, 'Cart');
+        }
+    }
+
+    async statusPayment(req, sessionId: string) {
+        try {
+            const cart: CartDocument[] = await this.getAllCartOfUser(req.user.userId);
+            const rightCart = cart.find((element) => {
+                return element.cartState === CartState.Pending
+            });
+            const stripeResponse = await this.stripeService.checkCheckoutStatusSession(sessionId);
+            if (stripeResponse.status === 'open') {
+                rightCart.cartState = CartState.Normal;
+            } else if (stripeResponse.status === 'complete') {
+                for (const item of rightCart.items) {
+                    await this.productService.updateProduct(item.productId, {isSold: true});
+                }
+                rightCart.cartState = CartState.Paid;
+            }
+            rightCart.save();
+            return stripeResponse;
+        } catch (error) {
+            if (error instanceof ErrorTemplate)
+                throw error;
+            else
+                throw new ErrorTemplate(400, error.message || `Can\'t update status of cart for user : ${req.user.userId}.`, 'Cart');
+        }
+    }
 }
