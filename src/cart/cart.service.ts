@@ -164,18 +164,33 @@ export class CartService {
     }
   }
 
-  async removeItemFromCart(userId: string, productId: string): Promise<any> {
+  async removeItemFromCart(userId: string, productId: string, quantity: number): Promise<any> {
     try {
       const cart = await this.getCart(userId);
-  
+      const product = await this.productService.getProduct(productId);
       const itemIndex = cart.items.findIndex(
         (item) => item.productId == productId,
       );
-  
+
       if (itemIndex > -1) {
-        cart.items.splice(itemIndex, 1);
-        return cart.save();
+        console.log("Pré changement : ", cart.items[itemIndex].quantity)
+        if (cart.items[itemIndex].quantity <= quantity) {
+          cart.items.splice(itemIndex, 1);
+          await this.recalculateCart(cart)
+        } else {
+          const item = cart.items[itemIndex];
+          item.quantity = Number(item.quantity) - Number(quantity);
+          item.subTotalPrice -= product.price * quantity;
+          cart.items[itemIndex] = item;
+          await this.recalculateCart(cart);
+        }
+        if (cart.items.length === 0) {
+          await this.deleteCart(userId);
+          return {card: null}
+        }
+        return await cart.save();
       }
+      return null;
     } catch (error) {
       if (error instanceof ErrorTemplate)
         throw error;

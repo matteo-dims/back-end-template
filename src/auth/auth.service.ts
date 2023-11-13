@@ -1,8 +1,8 @@
-import { UserService } from '../user/user.service';
-import { Injectable } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import {UserService} from '../user/user.service';
+import {Injectable} from '@nestjs/common';
+import {JwtService} from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { ErrorTemplate } from 'src/utils/error.dto';
+import {ErrorTemplate} from 'src/utils/error.dto';
 
 @Injectable()
 export class AuthService {
@@ -15,7 +15,6 @@ export class AuthService {
     const user = await this.userService.findUser(username);
     if (!user)
       return null;
-    console.log('test ici ça passe zebi')
     const isPasswordMatch = await bcrypt.compare(password, user.password);
     if (user && isPasswordMatch) {
       return user;

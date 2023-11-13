@@ -92,10 +92,10 @@ export class CartController {
   @ApiOperation({ summary: 'Remove an item from the cart' })
   @ApiBody({ type: String })
   @ApiResponse({ status: 200, description: 'Item removed from the cart successfully' })
-  async removeItemFromCart(@Request() req, @Body() { productId }) {
+  async removeItemFromCart(@Request() req, @Body() {productId, quantity}) {
     try {
       const userId = req.user.userId;
-      const cart = await this.cartService.removeItemFromCart(userId, productId);
+      const cart = await this.cartService.removeItemFromCart(userId, productId, quantity);
       if (!cart) throw new NotFoundException('Item does not exist');
       return cart;
     } catch(error) {
@@ -109,9 +109,9 @@ export class CartController {
   @ApiOperation({ summary: 'Delete the entire cart by user ID' })
   @ApiParam({ name: 'id', type: String })
   @ApiResponse({ status: 200, description: 'Cart deleted successfully' })
-  async deleteCart(@Param('id') userId: string) {
+  async deleteCart(@Request() req) {
     try {
-      const cart = await this.cartService.deleteCart(userId);
+      const cart = await this.cartService.deleteCart(req.user.userId);
       if (!cart) throw new NotFoundException('Cart does not exist');
       return cart;
     } catch(error) {
