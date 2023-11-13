@@ -173,22 +173,46 @@ export class CartService {
       );
 
       if (itemIndex > -1) {
-        console.log("Pré changement : ", cart.items[itemIndex].quantity)
         if (cart.items[itemIndex].quantity <= quantity) {
           cart.items.splice(itemIndex, 1);
           await this.recalculateCart(cart)
         } else {
           const item = cart.items[itemIndex];
           item.quantity = Number(item.quantity) - Number(quantity);
-          item.subTotalPrice -= product.price * quantity;
+          item.subTotalPrice -= Number(product.price) * Number(quantity);
           cart.items[itemIndex] = item;
           await this.recalculateCart(cart);
         }
         if (cart.items.length === 0) {
           await this.deleteCart(userId);
-          return {card: null}
+          return {cart: null}
         }
-        return await cart.save();
+        await cart.save();
+        let transformedCart: CartBulkDTO = new CartBulkDTO();
+        transformedCart.items = [];
+        transformedCart._id = cart._id;
+        transformedCart.cartState = cart.cartState;
+        transformedCart.totalPrice = cart.totalPrice;
+        transformedCart.userId = cart.userId;
+        for (let item of cart.items) {
+          const product = await this.productService.getProduct(item.productId);
+          transformedCart.items.push(
+              {
+                product: {
+                  _id: item.productId,
+                  name: product.name,
+                  description: product.description,
+                  price: product.price,
+                  category: product.category,
+                  isSold: product.isSold,
+                  imgUrl: product.imgUrl,
+                },
+                quantity: item.quantity,
+                subTotalPrice: item.subTotalPrice,
+              }
+          )
+        }
+        return transformedCart
       }
       return null;
     } catch (error) {
