@@ -10,7 +10,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install app dependencies
-RUN yarn install
+RUN npm install
 
 # Bundle app source
 COPY . .

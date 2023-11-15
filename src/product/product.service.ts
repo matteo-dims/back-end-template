@@ -1,11 +1,13 @@
-import { Injectable } from '@nestjs/common';
-import { Model } from 'mongoose';
-import { InjectModel } from '@nestjs/mongoose';
-import { Product, ProductDocument } from './schemas/product.schema';
-import { CreateProductDTO } from './dtos/create-product.dto';
-import { FilterProductDTO } from './dtos/filter-product.dto';
-import { S3ManagerService } from 'src/s3-manager/s3-manager.service';
-import { ErrorTemplate } from 'src/utils/error.dto';
+import {Injectable} from '@nestjs/common';
+import {Model} from 'mongoose';
+import {InjectModel} from '@nestjs/mongoose';
+import {Product, ProductDocument} from './schemas/product.schema';
+import {CreateProductDTO} from './dtos/create-product.dto';
+import {FilterProductDTO} from './dtos/filter-product.dto';
+import {S3ManagerService} from 'src/s3-manager/s3-manager.service';
+import {ErrorTemplate} from 'src/utils/error.dto';
+import * as fs from 'fs';
+import * as Papa from 'papaparse';
 
 @Injectable()
 export class ProductService {
@@ -87,6 +89,7 @@ export class ProductService {
         createProductDTO.imgUrl = file.originalname;
       }
       createProductDTO.isSold = false;
+      createProductDTO.price = Number(createProductDTO.price)
       const newProduct = await this.productModel.create(createProductDTO);
       return newProduct.save();
     } catch (error) {
@@ -94,6 +97,31 @@ export class ProductService {
         throw error;
       else
         throw new ErrorTemplate(400, error.message || `Can\'t add product with name : ${createProductDTO.name}.`, 'Product');
+    }
+  }
+
+  async addProductFromCSV(file: Express.Multer.File) {
+    try {
+      const csvFile: Buffer = fs.readFileSync(`files/${file.filename}`);
+      const csvData = csvFile.toString();
+      const parsedCSV = Papa.parse(csvData, {
+        header: true,
+        skipEmptyLines: true,
+        transformHeader: (header) => header.toLowerCase().replace('#', '').trim(),
+        complete: (result) => result.data,
+      });
+      console.log(parsedCSV.data);
+      const resultProducts: Product[] = [];
+      for (let i = 0; i < parsedCSV.data.length; i++) {
+        const element: CreateProductDTO = parsedCSV.data[i] as CreateProductDTO;
+        resultProducts.push(await this.addProduct(element, null));
+      }
+      return {"products": resultProducts};
+    } catch (error) {
+      if (error instanceof ErrorTemplate)
+        throw error;
+      else
+        throw new ErrorTemplate(400, error.message || `Can\'t add product with name.`, 'Product');
     }
   }
 
