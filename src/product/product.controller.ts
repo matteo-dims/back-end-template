@@ -6,22 +6,23 @@ import {
   NotFoundException,
   Param,
   Post,
-  UploadedFile,
-  UseInterceptors,
   Put,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ProductService } from './product.service';
-import { CreateProductDTO } from './dtos/create-product.dto';
-import { FilterProductDTO } from './dtos/filter-product.dto';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
-import { Product } from './schemas/product.schema';
-import { JwtAuthGuard } from 'src/auth/guards/jwt.guard';
-import { Roles } from 'src/auth/decorators/roles.decorator';
-import { Role } from 'src/auth/enums/role.enum';
-import { RolesGuard } from 'src/auth/guards/roles.guard';
+import {ProductService} from './product.service';
+import {CreateProductDTO} from './dtos/create-product.dto';
+import {FilterProductDTO} from './dtos/filter-product.dto';
+import {FileInterceptor} from '@nestjs/platform-express';
+import {ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags} from '@nestjs/swagger';
+import {Product} from './schemas/product.schema';
+import {JwtAuthGuard} from 'src/auth/guards/jwt.guard';
+import {Roles} from 'src/auth/decorators/roles.decorator';
+import {Role} from 'src/auth/enums/role.enum';
+import {RolesGuard} from 'src/auth/guards/roles.guard';
+import {diskStorage} from "multer";
 
 
 @ApiTags('Products')
@@ -73,6 +74,20 @@ export class ProductController {
     try {
       return await this.productService.addProduct(createProductDTO, file);
     } catch(error) {
+      return error;
+    }
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Admin)
+  @Post('/csv')
+  @ApiOperation({summary: 'Add a new product from CSV'})
+  @ApiResponse({status: 201, description: 'Product added successfully', type: Product})
+  @UseInterceptors(FileInterceptor('file', {storage: diskStorage({destination: './files'})}))
+  async addProductFromCSV(@UploadedFile() file: Express.Multer.File) {
+    try {
+      return await this.productService.addProductFromCSV(file);
+    } catch (error) {
       return error;
     }
   }
