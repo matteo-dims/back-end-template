@@ -10,6 +10,8 @@ import {RolesGuard} from './guards/roles.guard';
 import {ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags} from '@nestjs/swagger';
 import {UpdateUserDto} from "../user/dtos/update-user.dto";
 import {UserMinimalDto} from "../user/dtos/return-user.dto";
+import {ErrorTemplate} from "../utils/error.dto";
+import {User} from "../user/schemas/user.schema";
 
 @ApiTags('User')
 @Controller('auth')
@@ -23,11 +25,14 @@ export class AuthController {
 
   @Post('/register')
   @ApiOperation({summary: 'Register a new user'})
-  @ApiBody({type: CreateUserDTO}) // Define the request body
+  @ApiBody({type: CreateUserDTO})
   @ApiResponse({status: 201, description: 'User registered successfully'})
-  async register(@Body() createUserDTO: CreateUserDTO): Promise<UserMinimalDto> {
+  async register(@Body() createUserDTO: CreateUserDTO) {
     try {
-        const user = await this.userService.addUser(createUserDTO);
+      if (await this.userService.findUser(createUserDTO.username)) {
+        throw new ErrorTemplate(400, 'Username already in use.', 'Auth');
+      }
+      const user: User = await this.userService.addUser(createUserDTO);
         return {
             username: user.username,
             email: user.email,

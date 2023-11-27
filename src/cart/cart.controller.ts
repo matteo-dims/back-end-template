@@ -8,6 +8,7 @@ import {ItemDTO} from './dtos/item.dto';
 import {ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags} from '@nestjs/swagger';
 import {ProductService} from 'src/product/product.service';
 import {CartDocument} from "./schemas/cart.schema";
+import {CartBulkDTO} from "./dtos/cartBulk.dto";
 
 @ApiTags('Cart')
 @Controller('cart')
@@ -30,6 +31,29 @@ export class CartController {
       }
       return await this.cartService.addProductsToCart(cart);
     } catch(error) {
+      return error;
+    }
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.User, Role.Admin)
+  @Get('/allUser')
+  @ApiOperation({summary: 'Get all carts of a user by userId.'})
+  @ApiResponse({status: 200, description: 'Carts got.'})
+  async getAllUserCarts(@Request() req) {
+    try {
+      const userId = req.user.userId;
+      const carts: CartDocument[] = await this.cartService.getAllCartOfUser(userId);
+      if (!carts || carts.length === 0) {
+        return {error: 'This user has not any cart.'};
+      }
+      let finalCarts: CartBulkDTO[] = [];
+      for (let cart of carts) {
+        let tmpCart: CartBulkDTO = await this.cartService.addProductsToCart(cart);
+        finalCarts.push(tmpCart);
+      }
+      return finalCarts;
+    } catch (error) {
       return error;
     }
   }
